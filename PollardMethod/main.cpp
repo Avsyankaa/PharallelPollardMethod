@@ -33,4 +33,11 @@ int main() {
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
 	std::cout << "The one thread time: " << elapsed_ms.count() << " ms\n";
 	std::cout << "P = Q * " << ps.answer << "\n";
+
+	begin = std::chrono::steady_clock::now();
+	ps.PharallelSolve(50000);
+	end = std::chrono::steady_clock::now();
+	elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
+	std::cout << "The pharallel time: " << elapsed_ms.count() << " ms\n";
+	std::cout << "P = Q * " << ps.answer << "\n";
 }
