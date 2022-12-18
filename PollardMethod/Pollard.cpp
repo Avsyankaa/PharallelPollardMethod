@@ -92,3 +92,75 @@ void PolardSolver::CalcSolution(const CryptoPP::Integer& sAi,
 	}
 	answer = ((bDiff)*curve.GetField().Divide(1, aDiff)) % curve.GetField().GetModulus();
 }
+
+void PolardSolver::PharallelSolve(unsigned w) {
+	Ri = Si = Q;
+	rAi = sAi = 0;
+	rBi = sBi = 1;
+
+	RiSet.resize(w + 1);
+	SiSet.resize(w + 1);
+
+	auto calcRi = [this, w]() {
+		for (unsigned i = 1; i <= w; i++) {
+			rAi = AIterFunc(rAi, Ri.x);
+			rBi = BIterFunc(rBi, Ri.x);
+			Ri = PointIterFunc(Ri, curve);
+			RiSet[i] = IterSet(Ri, rAi, rBi);
+		}
+	};
+	auto curveCopy = curve;
+
+	auto calcSi = [this, w, curveCopy]() {
+		for (unsigned i = 1; i <= w; i++) {
+			auto Ai_tmp = AIterFunc(sAi, Si.x);
+			auto Bi_tmp = BIterFunc(sBi, Si.x);
+			auto Si_tmp = PointIterFunc(Si, curveCopy);
+			sAi = AIterFunc(Ai_tmp, Si_tmp.x);
+			sBi = BIterFunc(Bi_tmp, Si_tmp.x);
+			Si = PointIterFunc(Si_tmp, curveCopy);
+			SiSet[i] = IterSet(Si, sAi, sBi);
+		}
+	};
+	std::atomic_bool stopCondition = false;
+
+	auto compareRiSi = [this, &stopCondition, w](bool firstPart) {
+		unsigned start;
+		unsigned end;
+		if (firstPart) {
+			start = 1;
+			end = w / 2;
+		}
+		else {
+			start = (w / 2) + 1;
+			end = w;
+		}
+		for (unsigned i = start; i <= end; i++) {
+			if (stopCondition) {
+				break;
+			}
+			if (RiSet[i].iterPoint == SiSet[i].iterPoint) {
+				stopCondition = true;
+				CalcSolution(SiSet[i].ai, SiSet[i].bi, RiSet[i].ai, RiSet[i].bi);
+				break;
+			}
+		}
+	};
+
+	while (!stopCondition) {
+		std::thread calcRiTh(calcRi);
+		std::thread calcSiTh(calcSi);
+
+		calcRiTh.join();
+		calcSiTh.join();
+
+		std::thread compRiSiFirst(compareRiSi, true);
+		std::thread compRiSiSecond(compareRiSi, false);
+
+		compRiSiFirst.join();
+		compRiSiSecond.join();
+	}
+
+	return;
+}
+

@@ -71,4 +71,22 @@ private:
 		const CryptoPP::Integer& sBi,
 		const CryptoPP::Integer& rAi,
 		const CryptoPP::Integer& rBi);
+
+
+	// Данные по текущей итерации для параллельного метода
+	struct IterSet {
+		IterSet() = default;
+		IterSet(const CryptoPP::ECP::Point& iterPoint,
+			const CryptoPP::Integer& ai,
+			const CryptoPP::Integer& bi) :
+			ai(ai),
+			bi(bi),
+			iterPoint(iterPoint) {};
+		CryptoPP::ECP::Point iterPoint;
+		CryptoPP::Integer ai;
+		CryptoPP::Integer bi;
+	};
+
+	std::vector<IterSet> RiSet;
+	std::vector<IterSet> SiSet;
 };
